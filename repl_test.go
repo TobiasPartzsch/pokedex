@@ -13,7 +13,7 @@ func TestCleanInput(t *testing.T) {
 		},
 		{
 			input:    "Charmander Bulbasaur PIKACHU",
-			expected: []string{"hello", "world"},
+			expected: []string{"charmander", "bulbasaur", "pikachu"},
 		},
 		{
 			input:    "",
@@ -24,23 +24,45 @@ func TestCleanInput(t *testing.T) {
 			expected: []string{"1234", "blablub"},
 		},
 		{
-			input:    "item1	tabSeparated",
+			input:    "item1\ttabSeparated",
 			expected: []string{"item1", "tabseparated"},
 		},
 	}
 	for _, c := range cases {
 		actual := cleanInput(c.input)
-		// Check the length of the actual slice against the expected slice
-		// if they don't match, use t.Errorf to print an error message
-		// and fail the test
+
+		actualLen := len(actual)
+		expectedLen := len(c.expected)
+		if actualLen != expectedLen {
+			t.Fatalf(`
+For input "%s":
+Length mismatch!
+Expected length: %d, Actual length: %d.
+Expected words: %v
+Actual words: %v
+`,
+				c.input,
+				expectedLen,
+				actualLen,
+				c.expected,
+				actual,
+			)
+		}
 		for i := range actual {
 			actualWord := actual[i]
 			expectedWord := c.expected[i]
-			// Check each word in the slice
-			// if they don't match, use t.Errorf to print an error message
-			// and fail the test
+
 			if actualWord != expectedWord {
-				t.Errorf("Expected \"%s\" but found \"%s\"!", expectedWord, actualWord)
+				t.Errorf(
+					`
+For input \"%s\",
+at index %d: Expected \"%s\" but found \"%s\"!"
+`,
+					c.input,
+					i,
+					expectedWord,
+					actualWord,
+				)
 			}
 		}
 	}
