@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 
 	"github.com/tobiaspartzsch/pokedex/internal/pokeapi"
+	"github.com/tobiaspartzsch/pokedex/internal/pokecache"
 )
 
 type cliCommand struct {
@@ -18,6 +20,7 @@ type cliCommand struct {
 type Config struct {
 	PokeAPIConfig pokeapi.Config
 	Commands      map[string]cliCommand
+	PokeCache     *pokecache.Cache
 }
 
 func main() {
@@ -26,7 +29,8 @@ func main() {
 			Next:     "https://pokeapi.co/api/v2/location-area", // Initialize with the base URL
 			Previous: "",                                        // No previous page initially
 		},
-		Commands: map[string]cliCommand{},
+		Commands:  map[string]cliCommand{},
+		PokeCache: pokecache.NewCache(10),
 	}
 	cfg.Commands = map[string]cliCommand{
 		"help": {
@@ -110,15 +114,39 @@ func commandPrintHelp(cfg *Config) error {
 }
 
 func fetchAndPrintLocationAreas(cfg *Config, url string) error {
-	locationsData, err := pokeapi.GetLocationAreas(url)
+	var locationsDataRaw []byte
+	var exists bool
+
+	if locationsDataRaw, exists = cfg.PokeCache.Get(url); !exists {
+		locationsDataResp, err := pokeapi.GetLocationAreas(url)
+		if err != nil {
+			return fmt.Errorf("failed to get location areas: %w", err)
+		}
+		locationsDataRaw, err = json.Marshal(locationsDataResp)
+		if err != nil {
+			return fmt.Errorf(
+				"error trying to marshal response %v!: %v",
+				locationsDataResp, err,
+			)
+		}
+		success := cfg.PokeCache.Add(url, locationsDataRaw)
+		if !success {
+			return fmt.Errorf("couldn't add url %v to chache", url)
+		}
+	}
+	var finalLocationAreasResp pokeapi.LocationAreas
+	err := json.Unmarshal(locationsDataRaw, &finalLocationAreasResp)
 	if err != nil {
-		return fmt.Errorf("failed to get location areas: %w", err)
+		return fmt.Errorf(
+			"error trying to unmarshal raw data %v!: %v",
+			locationsDataRaw, err,
+		)
 	}
 
-	cfg.PokeAPIConfig.Next = locationsData.Next
-	cfg.PokeAPIConfig.Previous = locationsData.Previous
+	cfg.PokeAPIConfig.Next = finalLocationAreasResp.Next
+	cfg.PokeAPIConfig.Previous = finalLocationAreasResp.Previous
 
-	for _, result := range locationsData.Results {
+	for _, result := range finalLocationAreasResp.Results {
 		fmt.Println(result.Name)
 	}
 	return nil
