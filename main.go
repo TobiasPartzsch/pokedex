@@ -6,21 +6,44 @@ import (
 	"log"
 	"os"
 	"strings"
+
+	"github.com/tobiaspartzsch/pokedex/internal/pokeapi"
 )
 
-var commands map[string]cliCommand
+type cliCommand struct {
+	description string
+	callback    func(*Config) error
+}
+
+type Config struct {
+	PokeAPIConfig pokeapi.Config
+	Commands      map[string]cliCommand
+}
 
 func main() {
-	commands = map[string]cliCommand{
+	cfg := Config{
+		PokeAPIConfig: pokeapi.Config{
+			Next:     "https://pokeapi.co/api/v2/location-area", // Initialize with the base URL
+			Previous: "",                                        // No previous page initially
+		},
+		Commands: map[string]cliCommand{},
+	}
+	cfg.Commands = map[string]cliCommand{
 		"help": {
 			description: "Displays a help message",
-			callback: func() error {
-				return printHelp(commands)
-			},
+			callback:    commandPrintHelp,
 		},
 		"exit": {
 			description: "Exit the Pokedex",
 			callback:    commandExit,
+		},
+		"map": {
+			description: "Display the next 20 area locations",
+			callback:    commandMap,
+		},
+		"mapb": {
+			description: "Display the previous 20 area locations",
+			callback:    commandMapb,
 		},
 	}
 
@@ -36,69 +59,71 @@ func main() {
 		if len(cleanInput) == 0 {
 			continue
 		}
-		command, exists := commands[cleanInput[0]]
+		command, exists := cfg.Commands[cleanInput[0]]
 		if !exists {
-			fmt.Println("Unknown command")
+			fmt.Printf("Unknown command: %s\n", cleanInput[0])
 			continue
 		}
-		command.callback()
+		command.callback(&cfg)
 	}
 }
 
-func cleanInput(text string) []string {
-	return strings.Fields(strings.ToLower(text))
-}
-
-func commandExit() error {
+func commandExit(cfg *Config) error {
 	msg := "Closing the Pokedex... Goodbye!"
 	fmt.Println(msg)
 	os.Exit(0)
 	return nil
 }
 
-func printHelp(commands map[string]cliCommand) error {
+func commandMap(cfg *Config) error {
+	next := cfg.PokeAPIConfig.Next
+	if next == "" {
+		fmt.Println("you're on the last page")
+		return nil
+	}
+	return fetchAndPrintLocationAreas(
+		cfg,
+		next,
+	)
+}
+
+func commandMapb(cfg *Config) error {
+	previous := cfg.PokeAPIConfig.Previous
+	if previous == "" {
+		fmt.Println("you're on the first page")
+		return nil
+	}
+	return fetchAndPrintLocationAreas(
+		cfg,
+		previous,
+	)
+}
+
+func commandPrintHelp(cfg *Config) error {
 	fmt.Println("Welcome to the Pokedex!\nUsage:")
 	fmt.Println("")
 
-	for command, definition := range commands {
+	for command, definition := range cfg.Commands {
 		fmt.Println(command + ": " + definition.description)
 	}
 	return nil
 }
 
-type cliCommand struct {
-	description string
-	callback    func() error
+func fetchAndPrintLocationAreas(cfg *Config, url string) error {
+	locationsData, err := pokeapi.GetLocationAreas(url)
+	if err != nil {
+		return fmt.Errorf("failed to get location areas: %w", err)
+	}
+
+	cfg.PokeAPIConfig.Next = locationsData.Next
+	cfg.PokeAPIConfig.Previous = locationsData.Previous
+
+	for _, result := range locationsData.Results {
+		fmt.Println(result.Name)
+	}
+	return nil
 }
 
-// func cleanInputManualSinglePass(text string) []string {
-// 	var words []string
-// 	var currentWord strings.Builder // Efficiently builds the current word
-// 	inWord := false                 // State: Are we currently building a word?
-
-// 	for _, r := range text {
-// 		// Always lowercase the character
-// 		lowerRune := unicode.ToLower(r)
-
-// 		if unicode.IsSpace(lowerRune) {
-// 			// If we were in a word, and now hit space, the word is complete
-// 			if inWord {
-// 				words = append(words, currentWord.String())
-// 				currentWord.Reset() // Clear the builder for the next word
-// 				inWord = false
-// 			}
-// 			// If we were already in space, do nothing (skip consecutive spaces)
-// 		} else {
-// 			// If we hit a non-space character
-// 			currentWord.WriteRune(lowerRune)
-// 			inWord = true // We are now in a word (or continuing one)
-// 		}
-// 	}
-
-// 	// After the loop, if we were still in a word (no trailing space), add it
-// 	if inWord {
-// 		words = append(words, currentWord.String())
-// 	}
-
-// 	return words
-// }
+func cleanInput(text string) []string {
+	return strings.Fields(strings.ToLower(text))
+}
