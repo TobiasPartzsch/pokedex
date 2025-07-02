@@ -8,7 +8,22 @@ import (
 	"strings"
 )
 
+var commands map[string]cliCommand
+
 func main() {
+	commands = map[string]cliCommand{
+		"help": {
+			description: "Displays a help message",
+			callback: func() error {
+				return printHelp(commands)
+			},
+		},
+		"exit": {
+			description: "Exit the Pokedex",
+			callback:    commandExit,
+		},
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
@@ -18,12 +33,42 @@ func main() {
 		}
 		text := scanner.Text()
 		cleanInput := cleanInput(text)
-		fmt.Printf("Your command was: %s\n", cleanInput[0])
+		if len(cleanInput) == 0 {
+			continue
+		}
+		command, exists := commands[cleanInput[0]]
+		if !exists {
+			fmt.Println("Unknown command")
+			continue
+		}
+		command.callback()
 	}
 }
 
 func cleanInput(text string) []string {
 	return strings.Fields(strings.ToLower(text))
+}
+
+func commandExit() error {
+	msg := "Closing the Pokedex... Goodbye!"
+	fmt.Println(msg)
+	os.Exit(0)
+	return nil
+}
+
+func printHelp(commands map[string]cliCommand) error {
+	fmt.Println("Welcome to the Pokedex!\nUsage:")
+	fmt.Println("")
+
+	for command, definition := range commands {
+		fmt.Println(command + ": " + definition.description)
+	}
+	return nil
+}
+
+type cliCommand struct {
+	description string
+	callback    func() error
 }
 
 // func cleanInputManualSinglePass(text string) []string {
