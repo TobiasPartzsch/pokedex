@@ -64,6 +64,10 @@ func main() {
 			description: "Inspect a Pokemon in your Pokedex",
 			callback:    commandInspect,
 		},
+		"pokedex": {
+			description: "Lists all the caught Pokemon in your Pokedex",
+			callback:    commandPokedex,
+		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -194,6 +198,14 @@ func commandCatch(cfg *Config, args []string) error {
 		fmt.Printf("%s escaped!\n", pokemonName)
 	}
 
+	return nil
+}
+
+func commandPokedex(cfg *Config, args []string) error {
+	fmt.Println("Your Pokedex:")
+	for pokemonName := range cfg.Pokedex {
+		fmt.Println(" - " + pokemonName)
+	}
 	return nil
 }
 
