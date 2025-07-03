@@ -14,7 +14,7 @@ import (
 
 type cliCommand struct {
 	description string
-	callback    func(*Config) error
+	callback    func(*Config, []string) error
 }
 
 type Config struct {
@@ -24,6 +24,8 @@ type Config struct {
 }
 
 func main() {
+	fmt.Println("tentacool")
+	fmt.Println("tentacruel")
 	cfg := Config{
 		PokeAPIConfig: pokeapi.Config{
 			Next:     "https://pokeapi.co/api/v2/location-area", // Initialize with the base URL
@@ -49,6 +51,10 @@ func main() {
 			description: "Display the previous 20 area locations",
 			callback:    commandMapb,
 		},
+		"explore": {
+			description: "Explore within a region (shows all Pokemon there)",
+			callback:    commandExplore,
+		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -68,18 +74,18 @@ func main() {
 			fmt.Printf("Unknown command: %s\n", cleanInput[0])
 			continue
 		}
-		command.callback(&cfg)
+		command.callback(&cfg, cleanInput[1:])
 	}
 }
 
-func commandExit(cfg *Config) error {
+func commandExit(cfg *Config, args []string) error {
 	msg := "Closing the Pokedex... Goodbye!"
 	fmt.Println(msg)
 	os.Exit(0)
 	return nil
 }
 
-func commandMap(cfg *Config) error {
+func commandMap(cfg *Config, args []string) error {
 	next := cfg.PokeAPIConfig.Next
 	if next == "" {
 		fmt.Println("you're on the last page")
@@ -91,7 +97,7 @@ func commandMap(cfg *Config) error {
 	)
 }
 
-func commandMapb(cfg *Config) error {
+func commandMapb(cfg *Config, args []string) error {
 	previous := cfg.PokeAPIConfig.Previous
 	if previous == "" {
 		fmt.Println("you're on the first page")
@@ -103,7 +109,19 @@ func commandMapb(cfg *Config) error {
 	)
 }
 
-func commandPrintHelp(cfg *Config) error {
+func commandExplore(cfg *Config, args []string) error {
+	previous := cfg.PokeAPIConfig.Previous
+	if previous == "" {
+		fmt.Println("you're on the first page")
+		return nil
+	}
+	return fetchAndPrintLocationAreas(
+		cfg,
+		previous,
+	)
+}
+
+func commandPrintHelp(cfg *Config, args []string) error {
 	fmt.Println("Welcome to the Pokedex!\nUsage:")
 	fmt.Println("")
 
