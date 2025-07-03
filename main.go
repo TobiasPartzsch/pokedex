@@ -110,15 +110,30 @@ func commandMapb(cfg *Config, args []string) error {
 }
 
 func commandExplore(cfg *Config, args []string) error {
-	previous := cfg.PokeAPIConfig.Previous
-	if previous == "" {
-		fmt.Println("you're on the first page")
-		return nil
+	if len(args) == 0 {
+		return fmt.Errorf("explore command requires a location name")
 	}
-	return fetchAndPrintLocationAreas(
-		cfg,
-		previous,
-	)
+	locationName := args[0]
+	fmt.Printf("Exploring %s...\n", locationName)
+
+	url := "https://pokeapi.co/api/v2/location-area/" + locationName
+
+	fetchFn := func(u string) (interface{}, error) {
+		return pokeapi.GetLocationAreaDetails(u)
+	}
+
+	var locationArea pokeapi.LocationArea
+	err := fetchAndCacheData(cfg, url, fetchFn, &locationArea)
+	if err != nil {
+		return fmt.Errorf("failed to explore location area: %w", err)
+	}
+
+	fmt.Println("Found Pokemon:")
+	for _, encounter := range locationArea.PokemonEncounters {
+		fmt.Printf(" - %s\n", encounter.Pokemon.Name)
+	}
+
+	return nil
 }
 
 func commandPrintHelp(cfg *Config, args []string) error {
@@ -131,42 +146,62 @@ func commandPrintHelp(cfg *Config, args []string) error {
 	return nil
 }
 
+// helper functions
+
 func fetchAndPrintLocationAreas(cfg *Config, url string) error {
-	var locationsDataRaw []byte
-	var exists bool
-
-	if locationsDataRaw, exists = cfg.PokeCache.Get(url); !exists {
-		locationsDataResp, err := pokeapi.GetLocationAreas(url)
-		if err != nil {
-			return fmt.Errorf("failed to get location areas: %w", err)
-		}
-		locationsDataRaw, err = json.Marshal(locationsDataResp)
-		if err != nil {
-			return fmt.Errorf(
-				"error trying to marshal response %v!: %v",
-				locationsDataResp, err,
-			)
-		}
-		success := cfg.PokeCache.Add(url, locationsDataRaw)
-		if !success {
-			return fmt.Errorf("couldn't add url %v to chache", url)
-		}
+	fetchFn := func(u string) (any, error) {
+		return pokeapi.GetLocationAreas(u)
 	}
-	var finalLocationAreasResp pokeapi.LocationAreas
-	err := json.Unmarshal(locationsDataRaw, &finalLocationAreasResp)
+
+	var locationAreas pokeapi.LocationAreas
+	err := fetchAndCacheData(cfg, url, fetchFn, &locationAreas)
 	if err != nil {
-		return fmt.Errorf(
-			"error trying to unmarshal raw data %v!: %v",
-			locationsDataRaw, err,
-		)
+		return fmt.Errorf("failed to fetch and print location areas: %w", err)
 	}
 
-	cfg.PokeAPIConfig.Next = finalLocationAreasResp.Next
-	cfg.PokeAPIConfig.Previous = finalLocationAreasResp.Previous
+	cfg.PokeAPIConfig.Next = locationAreas.Next
+	cfg.PokeAPIConfig.Previous = locationAreas.Previous
 
-	for _, result := range finalLocationAreasResp.Results {
+	for _, result := range locationAreas.Results {
 		fmt.Println(result.Name)
 	}
+	return nil
+}
+
+func fetchAndCacheData(
+	cfg *Config,
+	url string,
+	fetchFunc func(string) (any, error),
+	target any) error {
+
+	var rawData []byte
+	var exists bool
+
+	if rawData, exists = cfg.PokeCache.Get(url); !exists {
+		// Data not in cache, fetch it
+		data, err := fetchFunc(url) // Call the specific API fetch function
+		if err != nil {
+			return err // Error from the fetchFunc is already descriptive
+		}
+
+		// Marshal the fetched data to store in cache
+		rawData, err = json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("error marshalling data from %s: %w", url, err)
+		}
+
+		// Add to cache
+		if !cfg.PokeCache.Add(url, rawData) {
+			return fmt.Errorf("couldn't add url %v to cache", url)
+		}
+	}
+
+	// Unmarshal the (potentially cached) raw data into the target struct
+	err := json.Unmarshal(rawData, target)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling raw data from %s: %w", url, err)
+	}
+
 	return nil
 }
 
