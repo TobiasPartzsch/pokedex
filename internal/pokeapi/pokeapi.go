@@ -76,43 +76,44 @@ type LocationArea struct {
 }
 
 func GetLocationAreas(url string) (LocationAreas, error) {
-	la := LocationAreas{}
-	res, err := http.Get(url)
+	las := LocationAreas{}
+	err := fetchAndUnmarshall(url, &las)
 	if err != nil {
-		return la, fmt.Errorf("error while trying to get url %s: %v", url, err)
+		return LocationAreas{}, err
 	}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode > 299 {
-		return la, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
-	}
-	if err != nil {
-		return la, fmt.Errorf("error while trying to read repsonse body %v: %v", res.Body, err)
-	}
-	err = json.Unmarshal(body, &la)
-	if err != nil {
-		return la, fmt.Errorf("error while trying to unmarshal body %v: %v", body, err)
-	}
-	return la, nil
+	return las, nil
 }
 
 func GetLocationAreaDetails(url string) (LocationArea, error) {
 	la := LocationArea{}
-	res, err := http.Get(url)
+	err := fetchAndUnmarshall(url, &la)
 	if err != nil {
-		return la, fmt.Errorf("error while trying to get url %s: %v", url, err)
-	}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode > 299 {
-		return la, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
-	}
-	if err != nil {
-		return la, fmt.Errorf("error while trying to read repsonse body %v: %v", res.Body, err)
-	}
-	err = json.Unmarshal(body, &la)
-	if err != nil {
-		return la, fmt.Errorf("error while trying to unmarshal body %v: %v", body, err)
+		return LocationArea{}, err
 	}
 	return la, nil
+}
+
+func fetchAndUnmarshall(url string, target any) error {
+	res, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("error while trying to get url %s: %w", url, err)
+	}
+	// Always close the response body when you're done with it!
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("error while trying to read response body %v: %w", res.Body, err)
+	}
+
+	if res.StatusCode > 299 {
+		return fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
+	}
+
+	err = json.Unmarshal(body, target)
+	if err != nil {
+		return fmt.Errorf("error while trying to unmarshal body into target: %w", err)
+	}
+
+	return nil
 }
