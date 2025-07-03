@@ -53,6 +53,10 @@ func main() {
 			description: "Explore within a region (shows all Pokemon there)",
 			callback:    commandExplore,
 		},
+		"catch": {
+			description: "Throw a pokeball at a pokemon to catch it",
+			callback:    commandCatch,
+		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -116,7 +120,7 @@ func commandExplore(cfg *Config, args []string) error {
 
 	url := "https://pokeapi.co/api/v2/location-area/" + locationName
 
-	fetchFn := func(u string) (interface{}, error) {
+	fetchFn := func(u string) (any, error) {
 		return pokeapi.GetLocationAreaDetails(u)
 	}
 
@@ -130,6 +134,30 @@ func commandExplore(cfg *Config, args []string) error {
 	for _, encounter := range locationArea.PokemonEncounters {
 		fmt.Printf(" - %s\n", encounter.Pokemon.Name)
 	}
+
+	return nil
+}
+
+func commandCatch(cfg *Config, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("catch command requires a pokemon name")
+	}
+	pokemonName := args[0]
+	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
+
+	url := "https://pokeapi.co/api/v2/pokemon/" + pokemonName
+
+	fetchFn := func(u string) (any, error) {
+		return pokeapi.GetPokemon(u)
+	}
+
+	var pokemon pokeapi.Pokemon
+	err := fetchAndCacheData(cfg, url, fetchFn, &pokemon)
+	if err != nil {
+		return fmt.Errorf("failed to get pokemon information: %w", err)
+	}
+
+	fmt.Printf("%s has %d base experience\n", pokemonName, pokemon.BaseExperience)
 
 	return nil
 }
