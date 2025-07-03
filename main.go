@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strings"
 
@@ -21,6 +22,7 @@ type Config struct {
 	PokeAPIConfig pokeapi.Config
 	Commands      map[string]cliCommand
 	PokeCache     *pokecache.Cache
+	Pokedex       map[string]pokeapi.Pokemon
 }
 
 func main() {
@@ -31,6 +33,7 @@ func main() {
 		},
 		Commands:  map[string]cliCommand{},
 		PokeCache: pokecache.NewCache(10),
+		Pokedex:   make(map[string]pokeapi.Pokemon),
 	}
 	cfg.Commands = map[string]cliCommand{
 		"help": {
@@ -76,7 +79,10 @@ func main() {
 			fmt.Printf("Unknown command: %s\n", cleanInput[0])
 			continue
 		}
-		command.callback(&cfg, cleanInput[1:])
+		err := command.callback(&cfg, cleanInput[1:])
+		if err != nil {
+			fmt.Printf("Error executing %s, %v\n", cleanInput[0], err.Error())
+		}
 	}
 }
 
@@ -145,19 +151,42 @@ func commandCatch(cfg *Config, args []string) error {
 	pokemonName := args[0]
 	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
 
-	url := "https://pokeapi.co/api/v2/pokemon/" + pokemonName
-
-	fetchFn := func(u string) (any, error) {
+	urlPokemon := "https://pokeapi.co/api/v2/pokemon/" + pokemonName
+	fetchFnPokemon := func(u string) (any, error) {
 		return pokeapi.GetPokemon(u)
 	}
 
 	var pokemon pokeapi.Pokemon
-	err := fetchAndCacheData(cfg, url, fetchFn, &pokemon)
+	err := fetchAndCacheData(cfg, urlPokemon, fetchFnPokemon, &pokemon)
 	if err != nil {
+		fmt.Printf("commandCatch: err %v\n", err)
 		return fmt.Errorf("failed to get pokemon information: %w", err)
 	}
-
 	fmt.Printf("%s has %d base experience\n", pokemonName, pokemon.BaseExperience)
+
+	urlSpecies := pokemon.Species.URL
+	fetchFnSpecies := func(u string) (any, error) {
+		return pokeapi.GetPokemonSpecies(u)
+	}
+
+	var species pokeapi.PokemonSpecies
+	err = fetchAndCacheData(cfg, urlSpecies, fetchFnSpecies, &species)
+	if err != nil {
+		return fmt.Errorf("failed to get pokemon species information: %w", err)
+	}
+
+	captureRate := species.CaptureRate
+	if _, caught := cfg.Pokedex[pokemonName]; caught {
+		fmt.Printf("%s is already in your Pokedex!\n", pokemonName)
+		return nil
+	}
+
+	if rand.Intn(256) < captureRate {
+		cfg.Pokedex[pokemonName] = pokemon
+		fmt.Printf("%s was caught!\n", pokemonName)
+	} else {
+		fmt.Printf("%s escaped!\n", pokemonName)
+	}
 
 	return nil
 }
