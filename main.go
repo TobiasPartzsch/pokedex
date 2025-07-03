@@ -24,8 +24,6 @@ type Config struct {
 }
 
 func main() {
-	fmt.Println("tentacool")
-	fmt.Println("tentacruel")
 	cfg := Config{
 		PokeAPIConfig: pokeapi.Config{
 			Next:     "https://pokeapi.co/api/v2/location-area", // Initialize with the base URL
