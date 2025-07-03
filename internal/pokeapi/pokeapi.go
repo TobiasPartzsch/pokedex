@@ -39,6 +39,15 @@ func GetPokemon(url string) (Pokemon, error) {
 	return p, nil
 }
 
+func GetPokemonSpecies(url string) (PokemonSpecies, error) {
+	p := PokemonSpecies{}
+	err := fetchAndUnmarshall(url, &p)
+	if err != nil {
+		return PokemonSpecies{}, err
+	}
+	return p, nil
+}
+
 func fetchAndUnmarshall(url string, target any) error {
 	res, err := http.Get(url)
 	if err != nil {

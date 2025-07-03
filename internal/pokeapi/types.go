@@ -346,3 +346,92 @@ type Pokemon struct {
 		} `json:"abilities"`
 	} `json:"past_abilities"`
 }
+
+type PokemonSpecies struct {
+	ID                   int    `json:"id"`
+	Name                 string `json:"name"`
+	Order                int    `json:"order"`
+	GenderRate           int    `json:"gender_rate"`
+	CaptureRate          int    `json:"capture_rate"`
+	BaseHappiness        int    `json:"base_happiness"`
+	IsBaby               bool   `json:"is_baby"`
+	IsLegendary          bool   `json:"is_legendary"`
+	IsMythical           bool   `json:"is_mythical"`
+	HatchCounter         int    `json:"hatch_counter"`
+	HasGenderDifferences bool   `json:"has_gender_differences"`
+	FormsSwitchable      bool   `json:"forms_switchable"`
+	GrowthRate           struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"growth_rate"`
+	PokedexNumbers []struct {
+		EntryNumber int `json:"entry_number"`
+		Pokedex     struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"pokedex"`
+	} `json:"pokedex_numbers"`
+	EggGroups []struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"egg_groups"`
+	Color struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"color"`
+	Shape struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"shape"`
+	EvolvesFromSpecies struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"evolves_from_species"`
+	EvolutionChain struct {
+		URL string `json:"url"`
+	} `json:"evolution_chain"`
+	Habitat    any `json:"habitat"`
+	Generation struct {
+		Name string `json:"name"`
+		URL  string `json:"url"`
+	} `json:"generation"`
+	Names []struct {
+		Name     string `json:"name"`
+		Language struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"language"`
+	} `json:"names"`
+	FlavorTextEntries []struct {
+		FlavorText string `json:"flavor_text"`
+		Language   struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"language"`
+		Version struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"version"`
+	} `json:"flavor_text_entries"`
+	FormDescriptions []struct {
+		Description string `json:"description"`
+		Language    struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"language"`
+	} `json:"form_descriptions"`
+	Genera []struct {
+		Genus    string `json:"genus"`
+		Language struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"language"`
+	} `json:"genera"`
+	Varieties []struct {
+		IsDefault bool `json:"is_default"`
+		Pokemon   struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"pokemon"`
+	} `json:"varieties"`
+}
