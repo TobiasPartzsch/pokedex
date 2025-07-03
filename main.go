@@ -57,8 +57,12 @@ func main() {
 			callback:    commandExplore,
 		},
 		"catch": {
-			description: "Throw a pokeball at a pokemon to catch it",
+			description: "Throw a Pokeball at a Pokemon to catch it",
 			callback:    commandCatch,
+		},
+		"inspect": {
+			description: "Inspect a Pokemon in your Pokedex",
+			callback:    commandInspect,
 		},
 	}
 
@@ -151,6 +155,11 @@ func commandCatch(cfg *Config, args []string) error {
 	pokemonName := args[0]
 	fmt.Printf("Throwing a Pokeball at %s...\n", pokemonName)
 
+	if _, caught := cfg.Pokedex[pokemonName]; caught {
+		fmt.Printf("%s is already in your Pokedex!\n", pokemonName)
+		return nil
+	}
+
 	urlPokemon := "https://pokeapi.co/api/v2/pokemon/" + pokemonName
 	fetchFnPokemon := func(u string) (any, error) {
 		return pokeapi.GetPokemon(u)
@@ -172,14 +181,11 @@ func commandCatch(cfg *Config, args []string) error {
 	var species pokeapi.PokemonSpecies
 	err = fetchAndCacheData(cfg, urlSpecies, fetchFnSpecies, &species)
 	if err != nil {
-		return fmt.Errorf("failed to get pokemon species information: %w", err)
+		return fmt.Errorf("failed to get Pokemon species information: %w", err)
 	}
 
 	captureRate := species.CaptureRate
-	if _, caught := cfg.Pokedex[pokemonName]; caught {
-		fmt.Printf("%s is already in your Pokedex!\n", pokemonName)
-		return nil
-	}
+	fmt.Printf("%s has a capture rate of %d (out of 255).\n", pokemonName, captureRate)
 
 	if rand.Intn(256) < captureRate {
 		cfg.Pokedex[pokemonName] = pokemon
@@ -187,6 +193,23 @@ func commandCatch(cfg *Config, args []string) error {
 	} else {
 		fmt.Printf("%s escaped!\n", pokemonName)
 	}
+
+	return nil
+}
+
+func commandInspect(cfg *Config, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("explore command requires a Pokemon name")
+	}
+	pokemonName := args[0]
+	pokemon, caught := cfg.Pokedex[pokemonName]
+	if !caught {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+
+	fmt.Printf("Inspecting %s...\n", pokemonName)
+	pokemon.PrintDetails()
 
 	return nil
 }
