@@ -7,27 +7,6 @@ import (
 	"net/http"
 )
 
-func GetLocationAreas(url string) (LocationAreas, error) {
-	la := LocationAreas{}
-	res, err := http.Get(url)
-	if err != nil {
-		return la, fmt.Errorf("error while trying to get url %s: %v", url, err)
-	}
-	body, err := io.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode > 299 {
-		return la, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
-	}
-	if err != nil {
-		return la, fmt.Errorf("error while trying to read repsonse body %v: %v", res.Body, err)
-	}
-	err = json.Unmarshal(body, &la)
-	if err != nil {
-		return la, fmt.Errorf("error while trying to unmarshal body %v: %v", body, err)
-	}
-	return la, nil
-}
-
 type Config struct {
 	Next     string
 	Previous string
@@ -94,4 +73,46 @@ type LocationArea struct {
 			} `json:"encounter_details"`
 		} `json:"version_details"`
 	} `json:"pokemon_encounters"`
+}
+
+func GetLocationAreas(url string) (LocationAreas, error) {
+	la := LocationAreas{}
+	res, err := http.Get(url)
+	if err != nil {
+		return la, fmt.Errorf("error while trying to get url %s: %v", url, err)
+	}
+	body, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if res.StatusCode > 299 {
+		return la, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
+	}
+	if err != nil {
+		return la, fmt.Errorf("error while trying to read repsonse body %v: %v", res.Body, err)
+	}
+	err = json.Unmarshal(body, &la)
+	if err != nil {
+		return la, fmt.Errorf("error while trying to unmarshal body %v: %v", body, err)
+	}
+	return la, nil
+}
+
+func GetLocationAreaDetails(url string) (LocationArea, error) {
+	la := LocationArea{}
+	res, err := http.Get(url)
+	if err != nil {
+		return la, fmt.Errorf("error while trying to get url %s: %v", url, err)
+	}
+	body, err := io.ReadAll(res.Body)
+	res.Body.Close()
+	if res.StatusCode > 299 {
+		return la, fmt.Errorf("response failed with status code: %d and\nbody: %s", res.StatusCode, body)
+	}
+	if err != nil {
+		return la, fmt.Errorf("error while trying to read repsonse body %v: %v", res.Body, err)
+	}
+	err = json.Unmarshal(body, &la)
+	if err != nil {
+		return la, fmt.Errorf("error while trying to unmarshal body %v: %v", body, err)
+	}
+	return la, nil
 }
