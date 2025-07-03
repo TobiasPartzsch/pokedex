@@ -1,5 +1,7 @@
 package pokeapi
 
+import "fmt"
+
 type LocationAreas struct {
 	Count    int    `json:"count"`
 	Next     string `json:"next"`
@@ -434,4 +436,18 @@ type PokemonSpecies struct {
 			URL  string `json:"url"`
 		} `json:"pokemon"`
 	} `json:"varieties"`
+}
+
+func (p Pokemon) PrintDetails() {
+	fmt.Printf("Name: %s\n", p.Name)
+	fmt.Printf("Height: %d\n", p.Height)
+	fmt.Printf("Weight: %d\n", p.Weight)
+	fmt.Println("Stats:")
+	for _, stat := range p.Stats {
+		fmt.Printf("  -%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+	fmt.Println("Types:")
+	for _, t := range p.Types {
+		fmt.Printf("  - %s\n", t.Type.Name)
+	}
 }
